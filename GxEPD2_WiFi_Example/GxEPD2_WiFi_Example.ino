@@ -163,7 +163,8 @@ GxEPD2_BW < GxEPD2_1248, GxEPD2_1248::HEIGHT / 4 > display(GxEPD2_1248(/*sck=*/ 
 #include <WiFiClient.h>
 #include <WiFiClientSecure.h>
 
-
+#include <ArduinoJson.h>
+#include <HTTPClient.h>
 
 const char* ssid     = "WiFi-2.4-6340";
 const char* password = "w3zrz47jcbfc7";
@@ -225,6 +226,8 @@ void showBitmapFrom_HTTPS(const char* host, const char* path, const char* filena
 void showBitmapFrom_HTTP_Buffered(const char* host, const char* path, const char* filename, int16_t x, int16_t y, bool with_color = true);
 void showBitmapFrom_HTTPS_Buffered(const char* host, const char* path, const char* filename, const char* fingerprint, int16_t x, int16_t y, bool with_color = true,
                                    const char* certificate = certificate_rawcontent);
+                                   
+const String url = "https://api.github.com/repos/DessoCode/ESP32/contents/Images?ref=main";
 
 void setup()
 {
@@ -287,6 +290,8 @@ void setup()
 
   //drawBitmaps_test();
   //drawBitmapsBuffered_test();
+
+  getFileNamesFromJSON();
 
   Serial.println("GxEPD2_WiFi_Example done");
 }
@@ -402,19 +407,65 @@ void drawBitmapsBuffered_200x200()
 }
 void drawBitmaps_custom()
 {
-  Serial.print("Drawing your image");
+  Serial.println("Drawing your image");
   int16_t w2 = display.width() / 2;
   int16_t h2 = display.height() / 2;
   int16_t x = display.width()  / 2;
   int16_t y = display.height() / 2;
-  //showBitmapFrom_HTTP_Buffered("www.squix.org", "/blog/wunderground/", "chanceflurries.bmp", w2 - 50, h2 - 50, false);
-  //delay(2000);
+  
   showBitmapFrom_HTTPS_Buffered(host_rawcontent, path_images, "robot.bmp", fp_rawcontent, 0, 0);
   delay(2000);
   showBitmapFrom_HTTPS_Buffered(host_rawcontent, path_images, "skulltest.bmp", fp_rawcontent, 0, 0);
   delay(2000);
+ 
 
+}
+
+void getFileNamesFromJSON()
+{
+  WiFiClient client;
+  bool connection_ok = false;
+  bool valid = false; // valid format to be handled
+  bool flip = true; // bitmap is stored bottom-to-top
+  uint32_t startTime = millis();
+  //https://api.github.com/repos/DessoCode/ESP32/git/trees/main
+  //https://api.github.com/repos/DessoCode/ESP32/contents/Images?ref=main
+  //JSON STUFF
+  HTTPClient http;
+  // Send HTTP request
+  http.begin(url);
+  http.GET();
   
+  int httpResponseCode = http.GET();
+  if (httpResponseCode > 0) {
+    Serial.print("HTTP ");
+    Serial.println(httpResponseCode);
+    String payload = http.getString();
+    Serial.println();
+    Serial.println(payload);
+  }
+  else {
+    Serial.print("Error code: ");
+    Serial.println(httpResponseCode);
+    Serial.println(":-(");
+  }
+  // Parse JSON object in response
+  DynamicJsonDocument doc(1024);
+
+  // Parse JSON object
+  DeserializationError error = deserializeJson(doc, client);
+  if (error) {
+    Serial.print(F("deserializeJson() failed: "));
+    Serial.println(error.f_str());
+    client.stop();
+    return;
+  }
+
+  // Extract values
+  Serial.println(F("Response:"));
+  Serial.println(doc["name"].as<char*>());
+
+  client.stop();
 
 }
 
