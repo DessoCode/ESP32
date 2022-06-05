@@ -317,12 +317,7 @@ void drawBitmaps_custom()
 
 void getFileNamesFromJSON()
 {
-  //WiFiClient client;
-  bool connection_ok = false;
-  bool valid = false; // valid format to be handled
-  bool flip = true; // bitmap is stored bottom-to-top
-  uint32_t startTime = millis();
- 
+
   //JSON Stuff
   HTTPClient http;
   //Send HTTP request
@@ -330,23 +325,14 @@ void getFileNamesFromJSON()
   http.begin(url);
   http.GET();
   
-  
-  //Serial.println(http.getStream().readString());
+    //Serial.println(http.getStream().readString());
   String json = http.getStream().readString();
 
-  //Remove first and last character
-//  json.remove(0,1);
-//  int length = json.length() - 1;
-//  json.remove(length,1);
-//  Serial.println(json);
-
-
-  // Parse response
+  //Serialize the document first, it can't read it as json otherwise
   DynamicJsonDocument doc(4000);
-  //deserializeJson(doc, http.getStream());
-    // Deserialize the JSON document
   serializeJsonPretty(doc, json);
-  
+
+  //Now deserialize it lmao
   DeserializationError error = deserializeJson(doc, json);
   
   // Test if parsing succeeds.
@@ -362,16 +348,19 @@ void getFileNamesFromJSON()
 
   // Extract values
   Serial.println("Response:");
-  
-  for (JsonObject item : doc.as<JsonArray>()) {
-
+  int imgCount = 0;
+  for (JsonObject item : doc.as<JsonArray>()) 
+  {
     const char* name = item["name"];
     Serial.println(name);
+    imgCount++;
   }
+  Serial.print("Images found: ");
+  Serial.println(imgCount);
+  
 
   // Disconnect
   http.end();
- // client.stop();
   
 }
 
