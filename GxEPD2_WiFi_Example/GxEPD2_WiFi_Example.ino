@@ -165,6 +165,7 @@ GxEPD2_BW < GxEPD2_1248, GxEPD2_1248::HEIGHT / 4 > display(GxEPD2_1248(/*sck=*/ 
 
 #include <ArduinoJson.h>
 #include <HTTPClient.h>
+#include <Vector.h>
 
 const char* ssid     = "WiFi-2.4-6340";
 const char* password = "w3zrz47jcbfc7";
@@ -288,10 +289,11 @@ void setup()
   display.setRotation(3);     // landscape orientaion
 
   //Get the JSON names
-  getFileNamesFromJSON();
+  String imageToDisplay = getRandomImageFromJSON();
 
   //Draw some bitmaps
-  drawBitmaps_custom();
+  //drawBitmaps_custom();
+  draw_BMP_From_Web(imageToDisplay);
 
   //Todo: drawHttpBitmap(getRandomImage());
 
@@ -302,7 +304,16 @@ void loop(void)
 {
 }
 
+void draw_BMP_From_Web(String img)
+{
+  Serial.println("Drawing your image");
+  Serial.println(img);
+  //Draw the image
+  showBitmapFrom_HTTPS_Buffered(host_rawcontent, path_images, img.c_str(), fp_rawcontent, 0, 0);
+  delay(2000);
+ 
 
+}
 void drawBitmaps_custom()
 {
   Serial.println("Drawing your image");
@@ -315,7 +326,7 @@ void drawBitmaps_custom()
 
 }
 
-void getFileNamesFromJSON()
+String getRandomImageFromJSON()
 {
 
   //JSON Stuff
@@ -339,7 +350,7 @@ void getFileNamesFromJSON()
   if (error) {
     Serial.print(F("deserializeJson() failed: "));
     Serial.println(error.f_str());
-    return;
+    //return String error = "ERROR";
   }
   else
   {
@@ -349,18 +360,38 @@ void getFileNamesFromJSON()
   // Extract values
   Serial.println("Response:");
   int imgCount = 0;
+
+  //Vector array of strings
+  const int ELEMENT_COUNT_MAX = 5;
+  String storage_array[ELEMENT_COUNT_MAX];
+  Vector<String> vector(storage_array);
+
+  
   for (JsonObject item : doc.as<JsonArray>()) 
   {
     const char* name = item["name"];
     Serial.println(name);
     imgCount++;
+
+    //Add the image to the list
+    vector.push_back(name);
   }
-  Serial.print("Images found: ");
-  Serial.println(imgCount);
-  
 
   // Disconnect
   http.end();
+
+  
+  Serial.print("Images found: ");
+  Serial.println(imgCount);
+  Serial.println(vector.size());
+  Serial.println(vector[1]);
+
+  //Pick a random image
+  String imgPicked = vector[random(vector.size())];
+  Serial.println(imgPicked);
+  return imgPicked;
+
+  
   
 }
 
