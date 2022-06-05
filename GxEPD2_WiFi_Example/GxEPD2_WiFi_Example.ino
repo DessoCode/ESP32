@@ -226,8 +226,10 @@ void showBitmapFrom_HTTPS(const char* host, const char* path, const char* filena
 void showBitmapFrom_HTTP_Buffered(const char* host, const char* path, const char* filename, int16_t x, int16_t y, bool with_color = true);
 void showBitmapFrom_HTTPS_Buffered(const char* host, const char* path, const char* filename, const char* fingerprint, int16_t x, int16_t y, bool with_color = true,
                                    const char* certificate = certificate_rawcontent);
-                                   
+                                 
 const String url = "https://api.github.com/repos/DessoCode/ESP32/contents/Images?ref=main";
+//const String url = "http://arduinojson.org/example.json";
+
 
 void setup()
 {
@@ -285,133 +287,25 @@ void setup()
   
   display.setRotation(3);     // landscape orientaion
 
-  drawBitmaps_custom();
-  //drawBitmapsBuffered_other();
-
-  //drawBitmaps_test();
-  //drawBitmapsBuffered_test();
-
+  //Get the JSON names
   getFileNamesFromJSON();
 
-  Serial.println("GxEPD2_WiFi_Example done");
+  //Draw some bitmaps
+  drawBitmaps_custom();
+
+  //Todo: drawHttpBitmap(getRandomImage());
+
+  Serial.println("End of setup.");
 }
 
 void loop(void)
 {
 }
 
-void drawBitmaps_200x200()
-{
-  int16_t x = (display.width() - 200) / 2;
-  int16_t y = (display.height() - 200) / 2;
-  showBitmapFrom_HTTPS(host_rawcontent, path_rawcontent, "logo200x200.bmp", fp_rawcontent, x, y);
-  delay(2000);
-  showBitmapFrom_HTTPS(host_rawcontent, path_rawcontent, "first200x200.bmp", fp_rawcontent, x, y);
-  delay(2000);
-  showBitmapFrom_HTTPS(host_rawcontent, path_rawcontent, "second200x200.bmp", fp_rawcontent, x, y);
-  delay(2000);
-  showBitmapFrom_HTTPS(host_rawcontent, path_rawcontent, "third200x200.bmp", fp_rawcontent, x, y);
-  delay(2000);
-  showBitmapFrom_HTTPS(host_rawcontent, path_rawcontent, "fourth200x200.bmp", fp_rawcontent, x, y);
-  delay(2000);
-  showBitmapFrom_HTTPS(host_rawcontent, path_rawcontent, "fifth200x200.bmp", fp_rawcontent, x, y);
-  delay(2000);
-  showBitmapFrom_HTTPS(host_rawcontent, path_rawcontent, "sixth200x200.bmp", fp_rawcontent, x, y);
-  delay(2000);
-  showBitmapFrom_HTTPS(host_rawcontent, path_rawcontent, "seventh200x200.bmp", fp_rawcontent, x, y);
-  delay(2000);
-  showBitmapFrom_HTTPS(host_rawcontent, path_rawcontent, "eighth200x200.bmp", fp_rawcontent, x, y);
-  delay(2000);
-}
 
-void drawBitmaps_other()
-{
-  int16_t w2 = display.width() / 2;
-  int16_t h2 = display.height() / 2;
-  showBitmapFrom_HTTP("www.packescape.com", "/img/assets/", "IniciMenusTV2.bmp", w2 - 200, h2 - 150, false);
-  delay(2000);
-  showBitmapFrom_HTTP("www.squix.org", "/blog/wunderground/", "chanceflurries.bmp", w2 - 50, h2 - 50, false);
-  delay(2000);
-  showBitmapFrom_HTTPS(host_rawcontent, path_prenticedavid, "betty_1.bmp", fp_rawcontent, w2 - 100, h2 - 160);
-  delay(2000);
-  showBitmapFrom_HTTPS(host_rawcontent, path_prenticedavid, "betty_4.bmp", fp_rawcontent, w2 - 102, h2 - 126);
-  delay(2000);
-  showBitmapFrom_HTTPS(host_rawcontent, path_prenticedavid, "marilyn_240x240x8.bmp", fp_rawcontent, w2 - 120, h2 - 120);
-  delay(2000);
-  showBitmapFrom_HTTPS(host_rawcontent, path_prenticedavid, "miniwoof.bmp", fp_rawcontent, w2 - 60, h2 - 80);
-  delay(2000);
-  showBitmapFrom_HTTPS(host_rawcontent, path_prenticedavid, "test.bmp", fp_rawcontent, w2 - 120, h2 - 160);
-  delay(2000);
-  showBitmapFrom_HTTPS(host_rawcontent, path_prenticedavid, "tiger.bmp", fp_rawcontent, w2 - 160, h2 - 120);
-  delay(2000);
-  showBitmapFrom_HTTPS(host_rawcontent, path_prenticedavid, "tiger_178x160x4.bmp", fp_rawcontent, w2 - 89, h2 - 80);
-  delay(2000);
-  showBitmapFrom_HTTPS(host_rawcontent, path_prenticedavid, "tiger_240x317x4.bmp", fp_rawcontent, w2 - 120, h2 - 160);
-  delay(2000);
-  showBitmapFrom_HTTPS(host_rawcontent, path_prenticedavid, "tiger_320x200x24.bmp", fp_rawcontent, w2 - 160, h2 - 100);
-  delay(2000);
-  showBitmapFrom_HTTPS(host_rawcontent, path_prenticedavid, "tiger16T.bmp", fp_rawcontent, w2 - 160, h2 - 100);
-  delay(2000);
-  showBitmapFrom_HTTPS(host_rawcontent, path_prenticedavid, "woof.bmp", fp_rawcontent, w2 - 100, h2 - 100);
-  delay(2000);
-}
-
-void drawBitmaps_test()
-{
-  int16_t w2 = display.width() / 2;
-  int16_t h2 = display.height() / 2;
-  showBitmapFrom_HTTPS(host_rawcontent, path_prenticedavid, "betty_4.bmp", fp_rawcontent, w2 - 102, h2 - 126);
-  delay(2000);
-  showBitmapFrom_HTTPS(host_rawcontent, path_rawcontent, "output5.bmp", fp_rawcontent, 0, 0);
-  delay(2000);
-  showBitmapFrom_HTTPS(host_rawcontent, path_rawcontent, "output6.bmp", fp_rawcontent, 0, 0);
-  delay(2000);
-  showBitmapFrom_HTTPS(host_rawcontent, path_rawcontent, "tractor_1.bmp", fp_rawcontent, 0, 0);
-  delay(2000);
-  showBitmapFrom_HTTPS(host_rawcontent, path_rawcontent, "tractor_4.bmp", fp_rawcontent, 0, 0);
-  delay(2000);
-  showBitmapFrom_HTTPS(host_rawcontent, path_rawcontent, "tractor_8.bmp", fp_rawcontent, 0, 0);
-  delay(2000);
-  showBitmapFrom_HTTPS(host_rawcontent, path_rawcontent, "tractor_11.bmp", fp_rawcontent, 0, 0);
-  delay(2000);
-  showBitmapFrom_HTTPS(host_rawcontent, path_rawcontent, "tractor_44.bmp", fp_rawcontent, 0, 0);
-  delay(2000);
-  showBitmapFrom_HTTPS(host_rawcontent, path_rawcontent, "tractor_88.bmp", fp_rawcontent, 0, 0);
-  delay(2000);
-  //showBitmapFrom_HTTPS(host_rawcontent, path_rawcontent, "liberato640x384.bmp", fp_rawcontent, 0, 0);
-  //delay(2000);
-}
-
-void drawBitmapsBuffered_200x200()
-{
-  int16_t x = (display.width() - 200) / 2;
-  int16_t y = (display.height() - 200) / 2;
-  showBitmapFrom_HTTPS_Buffered(host_rawcontent, path_rawcontent, "logo200x200.bmp", fp_rawcontent, x, y);
-  delay(2000);
-  showBitmapFrom_HTTPS_Buffered(host_rawcontent, path_rawcontent, "first200x200.bmp", fp_rawcontent, x, y);
-  delay(2000);
-  showBitmapFrom_HTTPS_Buffered(host_rawcontent, path_rawcontent, "second200x200.bmp", fp_rawcontent, x, y);
-  delay(2000);
-  showBitmapFrom_HTTPS_Buffered(host_rawcontent, path_rawcontent, "third200x200.bmp", fp_rawcontent, x, y);
-  delay(2000);
-  showBitmapFrom_HTTPS_Buffered(host_rawcontent, path_rawcontent, "fourth200x200.bmp", fp_rawcontent, x, y);
-  delay(2000);
-  showBitmapFrom_HTTPS_Buffered(host_rawcontent, path_rawcontent, "fifth200x200.bmp", fp_rawcontent, x, y);
-  delay(2000);
-  showBitmapFrom_HTTPS_Buffered(host_rawcontent, path_rawcontent, "sixth200x200.bmp", fp_rawcontent, x, y);
-  delay(2000);
-  showBitmapFrom_HTTPS_Buffered(host_rawcontent, path_rawcontent, "seventh200x200.bmp", fp_rawcontent, x, y);
-  delay(2000);
-  showBitmapFrom_HTTPS_Buffered(host_rawcontent, path_rawcontent, "eighth200x200.bmp", fp_rawcontent, x, y);
-  delay(2000);
-}
 void drawBitmaps_custom()
 {
   Serial.println("Drawing your image");
-  int16_t w2 = display.width() / 2;
-  int16_t h2 = display.height() / 2;
-  int16_t x = display.width()  / 2;
-  int16_t y = display.height() / 2;
   
   showBitmapFrom_HTTPS_Buffered(host_rawcontent, path_images, "robot.bmp", fp_rawcontent, 0, 0);
   delay(2000);
@@ -423,50 +317,62 @@ void drawBitmaps_custom()
 
 void getFileNamesFromJSON()
 {
-  WiFiClient client;
+  //WiFiClient client;
   bool connection_ok = false;
   bool valid = false; // valid format to be handled
   bool flip = true; // bitmap is stored bottom-to-top
   uint32_t startTime = millis();
-  //https://api.github.com/repos/DessoCode/ESP32/git/trees/main
-  //https://api.github.com/repos/DessoCode/ESP32/contents/Images?ref=main
-  //JSON STUFF
+ 
+  //JSON Stuff
   HTTPClient http;
-  // Send HTTP request
+  //Send HTTP request
+  http.useHTTP10(true);
   http.begin(url);
   http.GET();
   
-  int httpResponseCode = http.GET();
-  if (httpResponseCode > 0) {
-    Serial.print("HTTP ");
-    Serial.println(httpResponseCode);
-    String payload = http.getString();
-    Serial.println();
-    Serial.println(payload);
-  }
-  else {
-    Serial.print("Error code: ");
-    Serial.println(httpResponseCode);
-    Serial.println(":-(");
-  }
-  // Parse JSON object in response
-  DynamicJsonDocument doc(1024);
+  
+  //Serial.println(http.getStream().readString());
+  String json = http.getStream().readString();
 
-  // Parse JSON object
-  DeserializationError error = deserializeJson(doc, client);
+  //Remove first and last character
+//  json.remove(0,1);
+//  int length = json.length() - 1;
+//  json.remove(length,1);
+//  Serial.println(json);
+
+
+  // Parse response
+  DynamicJsonDocument doc(4000);
+  //deserializeJson(doc, http.getStream());
+    // Deserialize the JSON document
+  serializeJsonPretty(doc, json);
+  
+  DeserializationError error = deserializeJson(doc, json);
+  
+  // Test if parsing succeeds.
   if (error) {
     Serial.print(F("deserializeJson() failed: "));
     Serial.println(error.f_str());
-    client.stop();
     return;
+  }
+  else
+  {
+    Serial.println("JSON Parsed!");
   }
 
   // Extract values
-  Serial.println(F("Response:"));
-  Serial.println(doc["name"].as<char*>());
+  Serial.println("Response:");
+  
+  for (JsonObject item : doc.as<JsonArray>()) {
 
-  client.stop();
+    const char* name = item["name"];
+    Serial.println(name);
+  }
 
+  // Disconnect
+  http.end();
+ // client.stop();
+  
 }
 
 void drawBitmapsBuffered_other()
