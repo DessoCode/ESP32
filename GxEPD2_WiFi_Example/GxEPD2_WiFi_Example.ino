@@ -340,7 +340,7 @@ String getRandomImageFromJSON()
   String json = http.getStream().readString();
 
   //Serialize the document first, it can't read it as json otherwise
-  DynamicJsonDocument doc(4000);
+  DynamicJsonDocument doc(16384);
   serializeJsonPretty(doc, json);
 
   //Now deserialize it lmao
@@ -359,7 +359,7 @@ String getRandomImageFromJSON()
 
   // Extract values
   Serial.println("Response:");
-  int imgCount = 0;
+  //int imgCount = 0;
 
   //Vector array of strings
   const int ELEMENT_COUNT_MAX = 5;
@@ -371,7 +371,7 @@ String getRandomImageFromJSON()
   {
     const char* name = item["name"];
     Serial.println(name);
-    imgCount++;
+    //imgCount++;
 
     //Add the image to the list
     vector.push_back(name);
@@ -382,10 +382,9 @@ String getRandomImageFromJSON()
 
   
   Serial.print("Images found: ");
-  Serial.println(imgCount);
+  //Serial.println(imgCount);
   Serial.println(vector.size());
-  Serial.println(vector[1]);
-
+  
   //Pick a random image
   String imgPicked = vector[random(vector.size())];
   Serial.println(imgPicked);
