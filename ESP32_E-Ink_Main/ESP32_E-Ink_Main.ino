@@ -4,6 +4,8 @@
 //Include libraries
 //#include <GxEPD2_BW.h>
 #include <GxEPD2_3C.h>
+#include <Fonts/FreeMonoBold9pt7b.h>
+
 
 //Select display class matching the panel
 #define GxEPD2_DISPLAY_CLASS GxEPD2_3C
@@ -83,11 +85,25 @@ void showBitmapFrom_HTTPS_Buffered(const char* host, const char* path, const cha
                                    
 const String url = "https://api.github.com/repos/DessoCode/ESP32/contents/Images?ref=main";
 
+//Sleep
+#define uS_TO_S_FACTOR 1000000  /* Conversion factor for micro seconds to seconds */
+#define TIME_TO_SLEEP  60        /* Time ESP32 will go to sleep (in seconds) */
+RTC_DATA_ATTR int bootCount = 0;
+
+
 void setup()
 {
   Serial.begin(115200);
   Serial.println();
   Serial.println("Setup started!");
+
+  //Button
+  pinMode(13, INPUT_PULLUP);
+  //Increment boot number and print it every reboot
+  ++bootCount;
+  
+  Serial.println("Boot number: " + String(bootCount));
+  
   //Init Display
   display.init(115200);
   //Map pins
@@ -129,25 +145,26 @@ void setup()
   display.setRotation(1);    
   //Get the JSON names
   String imageToDisplay = getRandomImageFromJSON();
-
-  //Draw some bitmaps
-  draw_BMP_From_Web(imageToDisplay); 
-  Serial.println("YA DONE!");
+  //draw_BMP_From_Web(imageToDisplay); 
+  showBitmapFrom_HTTPS_Buffered(host_rawcontent, path_images, imageToDisplay.c_str(), fp_rawcontent, 0, 0);
+    
+  //Set button to GPIO 13 and ground
+  esp_sleep_enable_ext0_wakeup(GPIO_NUM_13,0); //1 = High, 0 = Low  
+  //esp_sleep_enable_timer_wakeup(TIME_TO_SLEEP * uS_TO_S_FACTOR);
+  //Serial.println("Setup ESP32 to sleep for every " + String(TIME_TO_SLEEP) + " Seconds");  //Go to sleep now
+  
+  Serial.println("Going to sleep now");
+  delay(1000);
+  esp_deep_sleep_start();
+  Serial.println("This will never be printed");
+  
 }
 
 void loop(void)
 {
-  //TODO
+
 }
 
-void draw_BMP_From_Web(String img)
-{
-  Serial.println("Drawing your image");
-  Serial.println(img);
-  //Draw the image
-  showBitmapFrom_HTTPS_Buffered(host_rawcontent, path_images, img.c_str(), fp_rawcontent, 0, 0);
-  delay(2000); 
-}
 
 String getRandomImageFromJSON()
 {
