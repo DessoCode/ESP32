@@ -75,6 +75,7 @@ const char* certificate_rawcontent =
 
 const char* host_rawcontent   = "raw.githubusercontent.com";
 const char* path_images = "/DessoCode/ESP32/main/Images/";
+const char* path_images_battery = "/DessoCode/ESP32/main/Images/battery/";
 const char* path_rawcontent   = "/ZinggJM/GxEPD2/master/extras/bitmaps/";
 const char* path_prenticedavid   = "/prenticedavid/MCUFRIEND_kbv/master/extras/bitmaps/";
 const char* path_waveshare_c  = "/waveshare/e-Paper/master/RaspberryPi_JetsonNano/c/pic/";
@@ -106,6 +107,24 @@ void setup()
   ++bootCount;
   
   Serial.println("Boot number: " + String(bootCount));
+
+  //Battery
+  // A13 pin is not exposed on Huzzah32 board because it's tied to
+  // measuring voltage level of battery. Note: you must
+  // multiply the analogRead value by 2x to get the true battery
+  // level. See: 
+  // https://learn.adafruit.com/adafruit-huzzah32-esp32-feather/esp32-faq
+  int rawValue = analogRead(A13);
+  // Reference voltage on ESP32 is 1.1V
+  // https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/peripherals/adc.html#adc-calibration
+  // See also: https://bit.ly/2zFzfMT
+  float voltageLevel = (rawValue / 4095.0) * 2 * 1.1 * 3.3; // calculate voltage level
+  float batteryFraction = voltageLevel / MAX_BATTERY_VOLTAGE;
+  float batteryPercentage = batteryFraction * 100;
+  
+  Serial.println((String)"Raw:" + rawValue + " Voltage:" + voltageLevel + "V Percent: " + (batteryFraction * 100) + "%");
+  delay(1000);
+  
   
   //Init Display
   display.init(115200);
@@ -145,33 +164,28 @@ void setup()
   Serial.println(WiFi.localIP());
 
   //Landscape orientation
-  display.setRotation(1);    
-  //Get the JSON names
-  String imageToDisplay = getRandomImageFromJSON();
-  //draw_BMP_From_Web(imageToDisplay); 
-  showBitmapFrom_HTTPS_Buffered(host_rawcontent, path_images, imageToDisplay.c_str(), fp_rawcontent, 0, 0);
+  display.setRotation(1); 
+
+  //Draw an image
+  if(batteryPercentage > 20)
+  {
+    //Get the JSON names
+    String imageToDisplay = getRandomImageFromJSON();
+    //draw_BMP_From_Web(imageToDisplay); 
+    showBitmapFrom_HTTPS_Buffered(host_rawcontent, path_images, imageToDisplay.c_str(), fp_rawcontent, 0, 0);
+  }
+  else
+  {
+    //If low battery
+    showBitmapFrom_HTTPS_Buffered(host_rawcontent, path_images_battery, "low_battery_20.bmp", fp_rawcontent, 0, 0);
+  }
+
     
   //Set button to GPIO 13 and ground
   esp_sleep_enable_ext0_wakeup(GPIO_NUM_13,0); //1 = High, 0 = Low  
   //esp_sleep_enable_timer_wakeup(TIME_TO_SLEEP * uS_TO_S_FACTOR);
   //Serial.println("Setup ESP32 to sleep for every " + String(TIME_TO_SLEEP) + " Seconds");  //Go to sleep now
 
-  
-  //Battery
-  // A13 pin is not exposed on Huzzah32 board because it's tied to
-  // measuring voltage level of battery. Note: you must
-  // multiply the analogRead value by 2x to get the true battery
-  // level. See: 
-  // https://learn.adafruit.com/adafruit-huzzah32-esp32-feather/esp32-faq
-  int rawValue = analogRead(A13);
-  // Reference voltage on ESP32 is 1.1V
-  // https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/peripherals/adc.html#adc-calibration
-  // See also: https://bit.ly/2zFzfMT
-  float voltageLevel = (rawValue / 4095.0) * 2 * 1.1 * 3.3; // calculate voltage level
-  float batteryFraction = voltageLevel / MAX_BATTERY_VOLTAGE;
-  
-  Serial.println((String)"Raw:" + rawValue + " Voltage:" + voltageLevel + "V Percent: " + (batteryFraction * 100) + "%");
-  delay(1000);
   
   //Sleepytime
   Serial.println("Going to sleep now");
