@@ -1,0 +1,169 @@
+#include <WiFi.h>              // Include for Wi-Fi functionality
+#include <WiFiClientSecure.h>
+#include <ArduinoJson.h>
+#include <GxEPD2_3C.h>
+#include <Adafruit_GFX.h>  
+#include <Fonts/FreeMonoBold9pt7b.h>
+#include <HTTPClient.h>
+#include <PNGdec.h>  
+// Define display class matching the panel
+#define GxEPD2_DISPLAY_CLASS GxEPD2_3C
+#define GxEPD2_DRIVER_CLASS GxEPD2_290c
+
+// Connections for Adafruit ESP32 Feather
+static const uint8_t EPD_BUSY = 32;  
+static const uint8_t EPD_CSSS = 15;  
+static const uint8_t EPD_RST  = 27;  
+static const uint8_t EPD_DC   = 33;  
+static const uint8_t EPD_SCK  = 5;   
+static const uint8_t EPD_MOSI = 18;  
+
+GxEPD2_DISPLAY_CLASS<GxEPD2_DRIVER_CLASS, 128> display(GxEPD2_290c(EPD_CSSS, EPD_DC, EPD_RST, EPD_BUSY));
+
+// Wi-Fi credentials
+const char* ssid = "telenet-ap-5660427";
+const char* password = "az4NstAyaasc";
+
+// API URL to get image URL
+const char* apiUrl = "https://us-central1-inkypal-98899.cloudfunctions.net/getRandomLikedImage?uid=eGEbpUu1P2Y94RKUoukIJiDuibD3";
+
+WiFiClientSecure client;
+PNG png;
+
+// Function to download the image data into a buffer
+bool downloadImageToBuffer(const char* imageUrl, uint8_t** imageBuffer, int32_t* imageSize) {
+  client.setInsecure();  // Disable certificate verification
+
+  HTTPClient https;
+  if (https.begin(client, imageUrl)) {  // Start secure connection
+    int httpCode = https.GET();
+    Serial.printf("HTTP request returned: %d\n", httpCode);
+
+    if (httpCode == HTTP_CODE_OK) {
+      int32_t contentLength = https.getSize();
+      Serial.printf("Content Length: %d bytes\n", contentLength);  // Log image size
+      if (contentLength <= 0) {
+        Serial.println("Invalid Content-Length.");
+        return false;
+      }
+
+      *imageBuffer = (uint8_t*)malloc(contentLength);
+      if (!*imageBuffer) {
+        Serial.println("Failed to allocate memory for image buffer.");
+        return false;
+      }
+
+      int totalBytesRead = 0;
+      WiFiClient* stream = https.getStreamPtr();
+      while (stream->connected() && totalBytesRead < contentLength) {
+        int bytesToRead = stream->available();
+        if (bytesToRead > 0) {
+          int bytesRead = stream->readBytes(*imageBuffer + totalBytesRead, bytesToRead);
+          totalBytesRead += bytesRead;
+          Serial.printf("Read %d bytes, total %d/%d\n", bytesRead, totalBytesRead, contentLength);
+        }
+        delay(10);
+      }
+
+      *imageSize = totalBytesRead;
+      Serial.printf("Total Image Size: %d bytes\n", *imageSize);  // Log the final size after download
+      return true;
+    } else {
+      Serial.printf("HTTP request failed with code: %d\n", httpCode);
+      return false;
+    }
+  } else {
+    Serial.println("Unable to connect to image URL");
+    return false;
+  }
+}
+
+// Your existing setup and loop functions...
+
+void setup() {
+  Serial.begin(115200);
+  Serial.println("Setup started");
+
+  display.init(115200);
+  display.setRotation(1);  
+  display.setFullWindow();
+
+  WiFi.begin(ssid, password);
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+  Serial.println("\nConnected to Wi-Fi");
+
+  HTTPClient http;
+  http.begin(apiUrl);
+  int httpCode = http.GET();
+  Serial.printf("API HTTP request returned: %d\n", httpCode);
+
+  if (httpCode == HTTP_CODE_OK) {
+    String payload = http.getString();
+    Serial.println("API Response: " + payload);
+
+    DynamicJsonDocument doc(1024);
+    DeserializationError error = deserializeJson(doc, payload);
+    if (!error) {
+      const char* imageUrl = doc["url"];
+      Serial.println("Image URL: " + String(imageUrl));
+
+      uint8_t* imageBuffer = nullptr;
+      int32_t imageSize = 0;
+
+      if (downloadImageToBuffer(imageUrl, &imageBuffer, &imageSize)) {
+        displayPNGFromBuffer(imageBuffer, imageSize);
+        free(imageBuffer);
+      } else {
+        Serial.println("Failed to download image.");
+      }
+    } else {
+      Serial.println("Failed to parse JSON");
+    }
+  } else {
+    Serial.printf("Failed to get image URL from API, code: %d\n", httpCode);
+  }
+  http.end();
+}
+
+void loop() {
+  // Empty loop
+}
+
+void displayPNGFromBuffer(uint8_t* imageBuffer, int32_t imageSize) {
+  int result = png.openFLASH(imageBuffer, imageSize, pngDraw);
+  if (result == PNG_SUCCESS) {
+    Serial.printf("Image width: %d, height: %d, bpp: %d\n", png.getWidth(), png.getHeight(), png.getBpp());
+    Serial.printf("Pixel type: %d\n", png.getPixelType());
+
+    display.setFullWindow();
+    display.firstPage();
+    do {
+      png.decode(NULL, 0);
+    } while (display.nextPage());
+
+    display.display();
+    Serial.println("PNG Image displayed successfully");
+    png.close();
+  } else {
+    Serial.println("Failed to decode PNG. Error code: " + String(result));
+  }
+}
+
+// Function to handle PNG drawing line-by-line
+void pngDraw(PNGDRAW *pDraw) {
+  uint8_t lineBuffer[296];  
+
+  for (int i = 0; i < pDraw->iWidth; i++) {
+    uint8_t r = pDraw->pPixels[i * 3 + 0];
+    uint8_t g = pDraw->pPixels[i * 3 + 1];
+    uint8_t b = pDraw->pPixels[i * 3 + 2];
+    uint8_t gray = (r + g + b) / 3;
+
+    lineBuffer[i] = (gray > 128) ? GxEPD_WHITE : GxEPD_BLACK;
+  }
+
+  display.writeImage(lineBuffer, 0, pDraw->y, pDraw->iWidth, 1);
+}
