@@ -1,22 +1,23 @@
-#include <WiFi.h>              // Include for Wi-Fi functionality
+#include <WiFi.h>
 #include <WiFiClientSecure.h>
 #include <ArduinoJson.h>
 #include <GxEPD2_3C.h>
-#include <Adafruit_GFX.h>  
+#include <Adafruit_GFX.h>
 #include <Fonts/FreeMonoBold9pt7b.h>
 #include <HTTPClient.h>
-#include <PNGdec.h>  
+#include <PNGdec.h>
+
 // Define display class matching the panel
 #define GxEPD2_DISPLAY_CLASS GxEPD2_3C
 #define GxEPD2_DRIVER_CLASS GxEPD2_290c
 
 // Connections for Adafruit ESP32 Feather
-static const uint8_t EPD_BUSY = 32;  
-static const uint8_t EPD_CSSS = 15;  
-static const uint8_t EPD_RST  = 27;  
-static const uint8_t EPD_DC   = 33;  
-static const uint8_t EPD_SCK  = 5;   
-static const uint8_t EPD_MOSI = 18;  
+static const uint8_t EPD_BUSY = 32;
+static const uint8_t EPD_CSSS = 15;
+static const uint8_t EPD_RST  = 27;
+static const uint8_t EPD_DC   = 33;
+static const uint8_t EPD_SCK  = 5;
+static const uint8_t EPD_MOSI = 18;
 
 GxEPD2_DISPLAY_CLASS<GxEPD2_DRIVER_CLASS, 128> display(GxEPD2_290c(EPD_CSSS, EPD_DC, EPD_RST, EPD_BUSY));
 
@@ -35,7 +36,7 @@ bool downloadImageToBuffer(const char* imageUrl, uint8_t** imageBuffer, int32_t*
   client.setInsecure();  // Disable certificate verification
 
   HTTPClient https;
-  if (https.begin(client, imageUrl)) {  // Start secure connection
+  if (https.begin(client, imageUrl)) {
     int httpCode = https.GET();
     Serial.printf("HTTP request returned: %d\n", httpCode);
 
@@ -78,14 +79,11 @@ bool downloadImageToBuffer(const char* imageUrl, uint8_t** imageBuffer, int32_t*
   }
 }
 
-// Your existing setup and loop functions...
-
 void setup() {
   Serial.begin(115200);
   Serial.println("Setup started");
 
   display.init(115200);
-  display.setRotation(0);  
   display.setFullWindow();
 
   WiFi.begin(ssid, password);
@@ -136,15 +134,16 @@ void displayPNGFromBuffer(uint8_t* imageBuffer, int32_t imageSize) {
   int result = png.openFLASH(imageBuffer, imageSize, pngDraw);
   if (result == PNG_SUCCESS) {
     Serial.printf("Image width: %d, height: %d, bpp: %d\n", png.getWidth(), png.getHeight(), png.getBpp());
-    Serial.printf("Pixel type: %d\n", png.getPixelType());
 
-    display.setFullWindow();
-    display.firstPage();
+    // Set up the display to not clear or flash after each update
+    display.setPartialWindow(0, 0, 296, 128);  // Set to full display area
+
+    display.firstPage();  // Start the page but don't clear the screen
     do {
-      png.decode(NULL, 0);
+      png.decode(NULL, 0);  // Decode image (no refresh until finished)
     } while (display.nextPage());
 
-    display.display();
+    // We don't call display.display() to avoid clearing the screen after the image
     Serial.println("PNG Image displayed successfully");
     png.close();
   } else {
@@ -152,8 +151,6 @@ void displayPNGFromBuffer(uint8_t* imageBuffer, int32_t imageSize) {
   }
 }
 
-// Function to handle PNG drawing line-by-line
-// Function to handle PNG drawing line-by-line
 // Function to handle PNG drawing line-by-line
 void pngDraw(PNGDRAW *pDraw) {
   int width = 128;   // Target height of the display (since it's rotated)
@@ -172,6 +169,7 @@ void pngDraw(PNGDRAW *pDraw) {
 
   // Manually rotate image by drawing each pixel at a rotated position
   for (int i = 0; i < width; i++) {
+    // Adjust X and Y coordinates to shift the image to the left
     display.drawPixel(pDraw->y, width - i - 1, lineBuffer[i]);  // Rotate by 90 degrees
   }
 }
