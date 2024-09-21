@@ -32,39 +32,23 @@ const char* password = "az4NstAyaasc";
 // API URL to get image URL
 const char* apiUrl = "https://us-central1-inkypal-98899.cloudfunctions.net/getRandomLikedImage?uid=eGEbpUu1P2Y94RKUoukIJiDuibD3";
 
-WiFiClientSecure client;
-
 // PNG decoder object
 PNG png;
+WiFiClientSecure client;
 
-// Custom file handling functions for PNGdec
-void* pngOpen(const char* filename, int32_t* size) {
-  // This function is not used since we are reading from a stream
-  return nullptr;
-}
+// Function to handle PNG drawing to e-ink
+void pngDraw(PNGDRAW *pDraw) {
+  uint16_t y = pDraw->y;  // Use pDraw->y for the y-coordinate
 
-void pngClose(void* handle) {
-  // Close the connection to the client
-}
-
-int32_t pngRead(PNGFILE* handle, uint8_t* buffer, int32_t length) {
-  return client.read(buffer, length);  // Read the requested number of bytes from the stream
-}
-
-int32_t pngSeek(PNGFILE* handle, int32_t position) {
-  // Seeking is not supported in streaming from HTTP
-  return 0;
-}
-
-// Function to draw PNG image
-void pngDraw(PNGDRAW* pDraw) {
-  uint8_t lineBuffer[128];  // Buffer for a line of pixels (adjust to width of the image)
+  uint8_t lineBuffer[128];  // Buffer size based on the width of the image
 
   for (int i = 0; i < pDraw->iWidth; i++) {
+    // Extract RGB values
     uint8_t r = pDraw->pPixels[i * 3 + 0];
     uint8_t g = pDraw->pPixels[i * 3 + 1];
     uint8_t b = pDraw->pPixels[i * 3 + 2];
 
+    // Map RGB to e-paper colors (black, white, red)
     uint8_t color;
     if (r > 200 && g < 50 && b < 50) {
       color = GxEPD_RED;  // Red
@@ -76,27 +60,33 @@ void pngDraw(PNGDRAW* pDraw) {
     lineBuffer[i] = color;
   }
 
-  display.writeImage(lineBuffer, nullptr, 0, pDraw->y, pDraw->iWidth, 1);  // Draw the line on the display
+  // Draw the line on the e-paper display at the correct y-position
+  display.writeImage(lineBuffer, nullptr, 0, y, pDraw->iWidth, 1);  // x starts at 0
 }
 
-// Function to fetch and display PNG from URL
+// Function to download and display PNG from URL
 void displayPNGFromUrl(const char* imageUrl) {
+  client.setInsecure();  // Bypass SSL certificate verification
+
   HTTPClient https;
   if (https.begin(client, imageUrl)) {
     int httpCode = https.GET();
-    if (httpCode == HTTP_CODE_OK) {
-      WiFiClient* stream = https.getStreamPtr();
-      int32_t rc = png.open((const char*)stream, pngOpen, pngClose, pngRead, pngSeek, pngDraw);
+    Serial.printf("HTTP request returned: %d\n", httpCode);  // Log the HTTP code
 
-      if (rc == PNG_SUCCESS) {
-        png.decode(nullptr, 0);
+    if (httpCode > 0 && httpCode == HTTP_CODE_OK) {
+      WiFiClient* stream = https.getStreamPtr();
+      if (png.open((const char*)stream, pngOpen, pngClose, pngRead, pngSeek, pngDraw) == PNG_SUCCESS) {
+        display.fillScreen(GxEPD_WHITE);  // Clear screen before drawing the PNG
+        display.display();  // Refresh display to apply the clear screen
+        png.decode(NULL, 0);  // Start decoding
         png.close();
-        Serial.println("PNG Image displayed successfully.");
+        display.display();  // Refresh display after drawing the image
+        Serial.println("PNG Image displayed successfully");
       } else {
-        Serial.printf("Error decoding PNG image, error code: %d\n", rc);
+        Serial.println("Failed to decode PNG");
       }
     } else {
-      Serial.printf("Failed to download image, HTTP code: %d\n", httpCode);
+      Serial.printf("HTTP request failed with code: %d\n", httpCode);
     }
     https.end();
   } else {
@@ -104,37 +94,69 @@ void displayPNGFromUrl(const char* imageUrl) {
   }
 }
 
-// Wi-Fi connect function
-void connectToWiFi() {
+void setup() {
+  Serial.begin(115200);
+  Serial.println("Setup started");
+
+  // Initialize display
+  display.init(115200);
+  display.setRotation(1);  // Landscape orientation
+  display.setFullWindow();  // Full window mode
+  
+
+  // Map SPI pins
+  SPI.begin(EPD_SCK, EPD_MISO, EPD_MOSI, EPD_CSSS);
+
+  // Connect to Wi-Fi
   WiFi.begin(ssid, password);
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
     Serial.print(".");
   }
   Serial.println("\nConnected to Wi-Fi");
-}
 
-void setup() {
-  Serial.begin(115200);
-  Serial.println("Setup started");
+  // Fetch image URL from API
+  HTTPClient http;
+  http.begin(apiUrl);
+  int httpCode = http.GET();
+  Serial.printf("API HTTP request returned: %d\n", httpCode);  // Debugging line
 
-  // Initialize the display
-  display.init(115200);
-  display.setRotation(1);  // Set landscape orientation
-  SPI.begin(EPD_SCK, EPD_MISO, EPD_MOSI, EPD_CSSS);
+  if (httpCode > 0 && httpCode == HTTP_CODE_OK) {
+    String payload = http.getString();
+    Serial.println("API Response: " + payload);
 
-  // Connect to Wi-Fi
-  connectToWiFi();
-
-  // Fetch and display PNG image from the API
-  display.fillScreen(GxEPD_WHITE);  // Clear the display to white
-  display.display();  // Update display to apply the clear screen
-  Serial.println("Display cleared to white.");
-
-  // Call API to fetch and display the image
-  displayPNGFromUrl(apiUrl);
+    DynamicJsonDocument doc(1024);
+    DeserializationError error = deserializeJson(doc, payload);
+    if (!error) {
+      const char* imageUrl = doc["url"];
+      Serial.println("Image URL: " + String(imageUrl));
+      displayPNGFromUrl(imageUrl);  // Download and display the image
+    } else {
+      Serial.println("Failed to parse JSON");
+    }
+  } else {
+    Serial.printf("Failed to get image URL from API, code: %d\n", httpCode);
+  }
+  http.end();
 }
 
 void loop() {
-  // Nothing to do here
+  // Empty loop
+}
+
+// Custom file handling functions for PNGdec
+void *pngOpen(const char *filename, int32_t *size) {
+  return nullptr;
+}
+
+void pngClose(void *handle) {
+  // Nothing to close here
+}
+
+int32_t pngRead(PNGFILE *handle, uint8_t *buffer, int32_t length) {
+  return client.read(buffer, length);  // Read from stream
+}
+
+int32_t pngSeek(PNGFILE *handle, int32_t position) {
+  return 0;  // Seeking not supported for streaming
 }
