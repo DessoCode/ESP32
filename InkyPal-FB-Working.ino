@@ -85,7 +85,7 @@ void setup() {
   Serial.println("Setup started");
 
   display.init(115200);
-  display.setRotation(1);  
+  display.setRotation(0);  
   display.setFullWindow();
 
   WiFi.begin(ssid, password);
@@ -153,10 +153,15 @@ void displayPNGFromBuffer(uint8_t* imageBuffer, int32_t imageSize) {
 }
 
 // Function to handle PNG drawing line-by-line
+// Function to handle PNG drawing line-by-line
+// Function to handle PNG drawing line-by-line
 void pngDraw(PNGDRAW *pDraw) {
-  uint8_t lineBuffer[296];  
+  int width = 128;   // Target height of the display (since it's rotated)
+  int height = 296;  // Target width of the display (since it's rotated)
 
-  for (int i = 0; i < pDraw->iWidth; i++) {
+  uint8_t lineBuffer[128];  // Adjust buffer for the correct width (128)
+
+  for (int i = 0; i < width; i++) {
     uint8_t r = pDraw->pPixels[i * 3 + 0];
     uint8_t g = pDraw->pPixels[i * 3 + 1];
     uint8_t b = pDraw->pPixels[i * 3 + 2];
@@ -165,5 +170,8 @@ void pngDraw(PNGDRAW *pDraw) {
     lineBuffer[i] = (gray > 128) ? GxEPD_WHITE : GxEPD_BLACK;
   }
 
-  display.writeImage(lineBuffer, 0, pDraw->y, pDraw->iWidth, 1);
+  // Manually rotate image by drawing each pixel at a rotated position
+  for (int i = 0; i < width; i++) {
+    display.drawPixel(pDraw->y, width - i - 1, lineBuffer[i]);  // Rotate by 90 degrees
+  }
 }
