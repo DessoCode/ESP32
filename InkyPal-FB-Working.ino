@@ -31,6 +31,9 @@ const char* apiUrl = "https://us-central1-inkypal-98899.cloudfunctions.net/getRa
 WiFiClientSecure client;
 PNG png;
 
+// Adjust this value to shift the image left or right
+int xOffset = 0;  // Set this to a positive number to shift right, negative to shift left
+
 // Function to download the image data into a buffer
 bool downloadImageToBuffer(const char* imageUrl, uint8_t** imageBuffer, int32_t* imageSize) {
   client.setInsecure();  // Disable certificate verification
@@ -84,6 +87,7 @@ void setup() {
   Serial.println("Setup started");
 
   display.init(115200);
+  display.setRotation(1);  // Reintroducing rotation to match the image orientation
   display.setFullWindow();
 
   WiFi.begin(ssid, password);
@@ -169,7 +173,7 @@ void pngDraw(PNGDRAW *pDraw) {
 
   // Manually rotate image by drawing each pixel at a rotated position
   for (int i = 0; i < width; i++) {
-    // Adjust X and Y coordinates to shift the image to the left
-    display.drawPixel(pDraw->y, width - i - 1, lineBuffer[i]);  // Rotate by 90 degrees
+    // Adjust X and Y coordinates to shift the image based on xOffset
+    display.drawPixel(pDraw->y, width - i - 1 + xOffset, lineBuffer[i]);  // Rotate by 90 degrees with X offset
   }
 }
