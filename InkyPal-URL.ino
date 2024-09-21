@@ -1,7 +1,6 @@
-// Include necessary libraries
 #include <GxEPD2_3C.h>
 #include <WiFi.h>
-#include <WiFiClient.h>
+#include <WiFiClientSecure.h>
 #include <HTTPClient.h>
 #include <ArduinoJson.h>
 #include <TJpg_Decoder.h>
@@ -29,12 +28,11 @@ GxEPD2_DISPLAY_CLASS<GxEPD2_DRIVER_CLASS, MAX_HEIGHT(GxEPD2_DRIVER_CLASS)> displ
 // Wi-Fi credentials
 const char* ssid = "telenet-ap-5660427";
 const char* password = "az4NstAyaasc";
-
 // API URL
 const char* apiUrl = "https://us-central1-inkypal-98899.cloudfunctions.net/getRandomLikedImage?uid=eGEbpUu1P2Y94RKUoukIJiDuibD3";
 
 // Function to draw pixels on the display
-bool tft_output(int16_t x, int16_t y, uint16_t w, uint16_t h, uint16_t *bitmap);
+bool tft_output(int16_t x, int16_t y, uint16_t w, uint16_t h, uint16_t *bitmap); // Corrected h to uint16_t
 
 void setup() {
   Serial.begin(115200);
@@ -75,7 +73,7 @@ void setup() {
         Serial.println(error.f_str());
         return;
       }
-      const char* imageUrl = doc["image"];
+      const char* imageUrl = doc["url"];
       Serial.println("Image URL: " + String(imageUrl));
 
       // Download and display the image
@@ -95,62 +93,69 @@ void loop() {
 
 // Function to download and display image from URL
 void displayImageFromUrl(const char* imageUrl) {
-  HTTPClient httpImage;
-  httpImage.begin(imageUrl);
-  int httpCodeImage = httpImage.GET();
+  WiFiClientSecure client;
+  client.setInsecure();  // Bypass SSL certificate verification (Not Secure)
 
-  if (httpCodeImage > 0) {
-    if (httpCodeImage == HTTP_CODE_OK) {
-      WiFiClient *stream = httpImage.getStreamPtr();
-      int len = httpImage.getSize();
-      if (len > 0) {
-        // Allocate buffer for the image
-        uint8_t *jpegData = (uint8_t *)malloc(len);
-        if (jpegData) {
-          int index = 0;
-          while (httpImage.connected() && index < len) {
-            size_t size = stream->available();
-            if (size) {
-              int c = stream->readBytes(jpegData + index, size);
-              index += c;
+  HTTPClient https;
+  if (https.begin(client, imageUrl)) {  // HTTPS connection
+    int httpCode = https.GET();
+    if (httpCode > 0) {
+      if (httpCode == HTTP_CODE_OK) {
+        int len = https.getSize();
+        Serial.printf("Image size: %d bytes\n", len);
+
+        if (len > 0) {
+          uint8_t* jpegData = (uint8_t*)malloc(len);
+          if (jpegData) {
+            int index = 0;
+            WiFiClient* stream = https.getStreamPtr();
+
+            while (https.connected() && index < len) {
+              size_t availableSize = stream->available();
+              if (availableSize) {
+                int c = stream->readBytes(jpegData + index, availableSize);
+                index += c;
+              }
+              delay(1);
             }
-            delay(1);
+
+            // Initialize the JPEG decoder
+            TJpgDec.setJpgScale(1);
+            TJpgDec.setCallback(tft_output);
+
+            // Clear the display
+            display.firstPage();
+            do {
+              // Decode and render the image
+              TJpgDec.drawJpg(0, 0, jpegData, len);
+            } while (display.nextPage());
+
+            // Free the buffer memory
+            free(jpegData);
+          } else {
+            Serial.println("Failed to allocate memory for image");
           }
-
-          // Initialize the JPEG decoder
-          TJpgDec.setJpgScale(1);
-          TJpgDec.setCallback(tft_output);
-
-          // Clear the display
-          display.firstPage();
-          do {
-            // Decode and render the image
-            TJpgDec.drawJpg(0, 0, jpegData, len);
-          } while (display.nextPage());
-
-          // Free the buffer memory
-          free(jpegData);
         } else {
-          Serial.println("Failed to allocate memory for image");
+          Serial.println("Image size is zero or not specified");
         }
       } else {
-        Serial.println("Image size is zero or not specified");
+        Serial.printf("Failed to download image, HTTP code: %d\n", httpCode);
       }
     } else {
-      Serial.printf("Failed to download image, HTTP code: %d\n", httpCodeImage);
+      Serial.printf("Image download failed: %s\n", https.errorToString(httpCode).c_str());
     }
+    https.end();
   } else {
-    Serial.printf("Image download failed: %s\n", httpImage.errorToString(httpCodeImage).c_str());
+    Serial.println("Unable to connect to image URL");
   }
-  httpImage.end();
 }
 
 // Callback function for the JPEG decoder
-bool tft_output(int16_t x, int16_t y, uint16_t w, uint16_t h, uint16_t *bitmap) {
+bool tft_output(int16_t x, int16_t y, uint16_t w, uint16_t h, uint16_t *bitmap) { // Corrected h to uint16_t
   uint16_t *pImg = bitmap;
   uint16_t color;
-  for (int16_t i = 0; i < h; i++) {
-    for (int16_t j = 0; j < w; j++) {
+  for (uint16_t i = 0; i < h; i++) { // Changed i to uint16_t
+    for (uint16_t j = 0; j < w; j++) { // Changed j to uint16_t
       color = pImg[j];
       uint8_t r = ((color >> 11) & 0x1F) << 3;
       uint8_t g = ((color >> 5) & 0x3F) << 2;
