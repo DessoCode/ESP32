@@ -161,10 +161,10 @@ void displayPNGFromBuffer(uint8_t* imageBuffer, int32_t imageSize) {
 
 // Function to handle PNG drawing line-by-line (rotate 90 degrees counterclockwise)
 void pngDraw(PNGDRAW *pDraw) {
-  int width = 128;   // Target height of the display (since it's rotated)
-  int height = 296;  // Target width of the display (since it's rotated)
+  int width = 296;   // Target height of the display (since it's rotated)
+  int height = 128;  // Target width of the display (since it's rotated)
 
-  uint8_t lineBuffer[128];  // Adjust buffer for the correct width (128)
+  uint8_t lineBuffer[296];  // Adjust buffer for the correct width (128)
 
   for (int i = 0; i < width; i++) {
     uint8_t r = pDraw->pPixels[i * 3 + 0];  // Red channel
@@ -184,8 +184,7 @@ void pngDraw(PNGDRAW *pDraw) {
     }
   }
 
-  // Now swap X and Y coordinates to rotate the image by 90 degrees
   for (int i = 0; i < width; i++) {
-    display.drawPixel(height - pDraw->y - 1, i + xOffset, lineBuffer[i]);
+    display.drawPixel(i + xOffset, height - pDraw->y - 1, lineBuffer[i]);
   }
 }
