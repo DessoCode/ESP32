@@ -146,7 +146,11 @@ void displayPNGFromBuffer(uint8_t* imageBuffer, int32_t imageSize) {
     do {
       png.decode(NULL, 0);  // Decode image (no refresh until finished)
     } while (display.nextPage());
+    // Ensure the screen has time to fully update
+    display.display();  // Complete the display update
 
+    delay(5000);  // Wait for 5 seconds to ensure the display fully refreshes
+    
     // We don't call display.display() to avoid clearing the screen after the image
     Serial.println("PNG Image displayed successfully");
     png.close();
@@ -155,7 +159,7 @@ void displayPNGFromBuffer(uint8_t* imageBuffer, int32_t imageSize) {
   }
 }
 
-// Function to handle PNG drawing line-by-line
+// Function to handle PNG drawing line-by-line (rotate 90 degrees counterclockwise)
 void pngDraw(PNGDRAW *pDraw) {
   int width = 128;   // Target height of the display (since it's rotated)
   int height = 296;  // Target width of the display (since it's rotated)
@@ -163,17 +167,25 @@ void pngDraw(PNGDRAW *pDraw) {
   uint8_t lineBuffer[128];  // Adjust buffer for the correct width (128)
 
   for (int i = 0; i < width; i++) {
-    uint8_t r = pDraw->pPixels[i * 3 + 0];
-    uint8_t g = pDraw->pPixels[i * 3 + 1];
-    uint8_t b = pDraw->pPixels[i * 3 + 2];
-    uint8_t gray = (r + g + b) / 3;
+    uint8_t r = pDraw->pPixels[i * 3 + 0];  // Red channel
+    uint8_t g = pDraw->pPixels[i * 3 + 1];  // Green channel
+    uint8_t b = pDraw->pPixels[i * 3 + 2];  // Blue channel
 
-    lineBuffer[i] = (gray > 128) ? GxEPD_WHITE : GxEPD_BLACK;
+    // Calculate brightness (average of RGB)
+    uint8_t brightness = (r + g + b) / 3;
+
+    // Map colors to black, white, and yellow/red
+    if (brightness > 200) {
+      lineBuffer[i] = GxEPD_WHITE;  // Very bright pixels -> white
+    } else if (brightness < 50) {
+      lineBuffer[i] = GxEPD_BLACK;  // Very dark pixels -> black
+    } else {
+      lineBuffer[i] = GxEPD_COLORED;  // Everything else -> yellow/red
+    }
   }
 
-  // Manually rotate image by drawing each pixel at a rotated position
+  // Now swap X and Y coordinates to rotate the image by 90 degrees
   for (int i = 0; i < width; i++) {
-    // Adjust X and Y coordinates to shift the image based on xOffset
-    display.drawPixel(pDraw->y, width - i - 1 + xOffset, lineBuffer[i]);  // Rotate by 90 degrees with X offset
+    display.drawPixel(height - pDraw->y - 1, i + xOffset, lineBuffer[i]);
   }
 }
