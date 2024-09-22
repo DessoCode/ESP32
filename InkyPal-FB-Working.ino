@@ -185,6 +185,6 @@ void pngDraw(PNGDRAW *pDraw) {
   }
 
   for (int i = 0; i < width; i++) {
-    display.drawPixel(i + xOffset, height - pDraw->y - 1, lineBuffer[i]);
+    display.drawPixel(width - i - 1, height - pDraw->y, lineBuffer[i]);
   }
 }
