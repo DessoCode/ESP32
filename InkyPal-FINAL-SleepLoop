@@ -100,7 +100,7 @@ void setup() {
   delay(10);
   digitalWrite(EPD_RST, HIGH);
   delay(200);
-  
+
   // Initialize display with a longer timeout
   display.init(115200, true, 2, false);
   delay(500);  // Add a short delay after initialization
@@ -145,6 +145,9 @@ void setup() {
     Serial.printf("Failed to get image URL from API, code: %d\n", httpCode);
   }
   http.end();
+  
+  // Add a delay for full color updates
+  delay(5000);  
 
   // Prepare for deep sleep
   esp_sleep_enable_timer_wakeup(TIME_TO_SLEEP * uS_TO_S_FACTOR);
@@ -184,19 +187,26 @@ void pngDraw(PNGDRAW *pDraw) {
 
   for (int i = 0; i < 296; i++) {
     uint16_t color = lineBuffer[i];
-    uint8_t r = (color & 0xF800) >> 8;
-    uint8_t g = (color & 0x07E0) >> 3;
-    uint8_t b = (color & 0x001F) << 3;
+// Extract RGB components from RGB565 format
+    uint8_t r5 = (color >> 11) & 0x1F; // 5 bits red
+    uint8_t g6 = (color >> 5) & 0x3F;  // 6 bits green
+    uint8_t b5 = color & 0x1F;         // 5 bits blue
 
-    uint16_t brightness = (r + g + b) / 3;
+    // Scale the values to 0-255 range
+    uint8_t r = (r5 * 255) / 31;
+    uint8_t g = (g6 * 255) / 63;
+    uint8_t b = (b5 * 255) / 31;
 
     uint16_t epd_color;
-    if (brightness > 200) {
+
+    // Define thresholds for pure white and pure black
+    if (r > 240 && g > 240 && b > 240) {
       epd_color = GxEPD_WHITE;
-    } else if (brightness < 50) {
+    } else if (r < 15 && g < 15 && b < 15) {
       epd_color = GxEPD_BLACK;
     } else {
-      epd_color = GxEPD_RED;
+      // Any other color is mapped to yellow
+      epd_color = GxEPD_YELLOW; // Represents yellow on your display
     }
 
     display.drawPixel(i, pDraw->y, epd_color);
