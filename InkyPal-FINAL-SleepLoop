@@ -13,13 +13,13 @@
 
 // Connections for Adafruit ESP32 Feather
 static const uint8_t EPD_BUSY = 32;
-static const uint8_t EPD_CSSS = 15;
+static const uint8_t EPD_CS = 15;
 static const uint8_t EPD_RST  = 27;
 static const uint8_t EPD_DC   = 33;
 static const uint8_t EPD_SCK  = 5;
 static const uint8_t EPD_MOSI = 18;
 
-GxEPD2_DISPLAY_CLASS<GxEPD2_DRIVER_CLASS, 128> display(GxEPD2_290c(EPD_CSSS, EPD_DC, EPD_RST, EPD_BUSY));
+GxEPD2_DISPLAY_CLASS<GxEPD2_DRIVER_CLASS, 128> display(GxEPD2_290c(EPD_CS, EPD_DC, EPD_RST, EPD_BUSY));
 
 // Wi-Fi credentials
 const char* ssid = "telenet-ap-5660427";
@@ -89,9 +89,21 @@ void setup() {
   Serial.begin(115200);
   Serial.println("Boot number: " + String(++bootCount));
 
+    // Reconfigure GPIO pins
+  pinMode(EPD_BUSY, INPUT);
+  pinMode(EPD_RST, OUTPUT);
+  pinMode(EPD_DC, OUTPUT);
+  pinMode(EPD_CS, OUTPUT);
+
+  // Manually reset the display
+  digitalWrite(EPD_RST, LOW);
+  delay(10);
+  digitalWrite(EPD_RST, HIGH);
+  delay(200);
+  
   // Initialize display with a longer timeout
   display.init(115200, true, 2, false);
-  delay(100);  // Add a short delay after initialization
+  delay(500);  // Add a short delay after initialization
   display.setRotation(1);
   display.setFullWindow();
 
@@ -156,13 +168,14 @@ void displayPNGFromBuffer(uint8_t* imageBuffer, int32_t imageSize) {
     do {
       png.decode(NULL, 0);
     } while (display.nextPage());
-    display.display();
+    //display.display();
 
     Serial.println("PNG Image displayed successfully");
     png.close();
   } else {
     Serial.println("Failed to decode PNG. Error code: " + String(result));
   }
+  display.display();
 }
 
 void pngDraw(PNGDRAW *pDraw) {
