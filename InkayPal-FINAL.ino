@@ -26,7 +26,7 @@ const char* ssid = "telenet-ap-5660427";
 const char* password = "az4NstAyaasc";
 
 // API URL to get image URL
-const char* apiUrl = "https://us-central1-inkypal-98899.cloudfunctions.net/getRandomLikedImage?uid=eGEbpUu1P2Y94RKUoukIJiDuibD3";
+const char* apiUrl = "https://us-central1-inkypal-98899.cloudfunctions.net/getRandomLikedImage?uid=OVhUq9ElOfbO1JIp5CC16E649KQ2";
 
 WiFiClientSecure client;
 PNG png;
